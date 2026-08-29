@@ -2,6 +2,7 @@ namespace Drive;
 
 public class GraphParseError
 {
+	public required string Error { get; init; }
 	public required string Message { get; init; }
 }
 
@@ -14,62 +15,62 @@ public class GraphParseResult
 
 public class Graph
 {
-	public IReadOnlyList<Partner> Partners { get; init; } = [];
-	public IReadOnlyList<Company> Companies { get; init; } = [];
-	public IReadOnlyList<Employee> Employees { get; init; } = [];
-	public IReadOnlyList<Contact> Contacts { get; init; } = [];
+	public required IReadOnlyDictionary<string, Partner> Partners { get; init; }
+	public required IReadOnlyDictionary<string, Company> Companies { get; init; }
+	public required IReadOnlyDictionary<string, Employee> Employees { get; init; }
+	public required IReadOnlyList<Contact> Contacts { get; init; }
+
+	private static int Rank(Definition definition) => definition.Type switch
+	{
+		DefinitionType.Partner => 0,
+		DefinitionType.Company => 0,
+		DefinitionType.Employee => 1,
+		DefinitionType.Contact => 2,
+		_ => int.MaxValue
+	};
 	
-	public static GraphParseResult Parse(ICollection<EntityDefinition> definitions)
+	public static GraphParseResult Parse(ICollection<Definition> definitions)
 	{
 		var errors = new List<GraphParseError>();
-		
-		var partners = definitions
-			.Where(x => x.Type == EntityType.Partner)
-			.Select(x => new Partner(x.Parts[0]))
-			.ToList();
+		var partners = new Dictionary<string, Partner>();
+		var companies = new Dictionary<string, Company>();
+		var employees = new Dictionary<string, Employee>();
+		var contacts = new List<Contact>();
 
-		var companies = definitions
-			.Where(x => x.Type == EntityType.Company)
-			.Select(x => new Company(x.Parts[0]))
-			.ToList();
-
-		var employees = definitions
-			.Where(x => x.Type == EntityType.Employee)
-			.Select((x) =>
+		foreach (var def in definitions.OrderBy(Rank))
+		{
+			switch (def.Type)
 			{
-				var company = companies.FirstOrDefault(c => c.Name == x.Parts[1]);
-
-				if (company is null)
-				{
-					errors.Add(new GraphParseError { Message = $"Company {x.Parts[1]} not found." });
-					return null;
-				}
-
-				return new Employee(x.Parts[0], company);
-			})
-			.ToList();
-
-		var contacts = definitions
-			.Where(x => x.Type == EntityType.Contact)
-			.Select(x =>
-			{
-				var employee = employees.FirstOrDefault(e => e?.Name == x.Parts[0]);
-				var partner = partners.FirstOrDefault(p => p.Name == x.Parts[1]);
-				var contactTypeResult = Enum.TryParse(x.Parts[2], true, out ContactType contactType);
-
-				if (employee == null)
-					errors.Add(new GraphParseError { Message = $"Employee '{x.Parts[0]}' not found." });
-				if (partner == null)
-					errors.Add(new GraphParseError { Message = $"Partner '{x.Parts[1]}' not found." });
-				if (!contactTypeResult)
-					errors.Add(new GraphParseError { Message = $"Invalid ContactType provided '{x.Parts[1]}'. Must be one of (email, call, coffee)." });
-
-				if (employee == null || partner == null || !contactTypeResult)
-					return null;
-				
-				return new Contact(employee, partner, contactType);
-			})
-			.ToList();
+				case DefinitionType.Partner:
+					partners[def.Parts[0]] = new Partner(def.Parts[0]);
+					break;
+				case DefinitionType.Company:
+					companies[def.Parts[0]] = new Company(def.Parts[0]);
+					break;
+				case DefinitionType.Employee:
+					if (!companies.TryGetValue(def.Parts[1], out var company))
+					{
+						errors.Add(new GraphParseError { Error = $"Failed to parse Employee '{def.Parts[0]}'", Message = $"Company {def.Parts[1]} not found" });
+						break;
+					}
+					employees[def.Parts[0]] = new Employee(def.Parts[0], company);
+					break;
+				case DefinitionType.Contact:
+					var employeeOk = employees.TryGetValue(def.Parts[0], out var employee);
+					var partnerOk = partners.TryGetValue(def.Parts[1], out var partner);
+					var typeOk = Enum.TryParse<ContactType>(def.Parts[2], true, out var type);
+					if (!employeeOk)
+						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{string.Join(", ", def.Parts)}'", Message = $"Employee {def.Parts[0]} not found" });
+					if (!partnerOk)
+						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{string.Join(", ", def.Parts)}'", Message = $"Partner {def.Parts[1]} not found" });
+					if (!typeOk)
+						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{string.Join(", ", def.Parts)}'", Message = $"Invalid ContactType provided '{def.Parts[2]}'. Must be one of (email, call, coffee)." });
+					
+					if (employeeOk && partnerOk && typeOk)
+						contacts.Add(new Contact(employee!, partner!, type));
+					break;
+			}
+		}
 
 		if (errors.Count > 0)
 			return new GraphParseResult { Success = false, Errors = errors };
@@ -81,8 +82,8 @@ public class Graph
 			{
 				Partners = partners,
 				Companies = companies,
-				Employees = (IReadOnlyList<Employee>)employees,
-				Contacts = (IReadOnlyList<Contact>)contacts
+				Employees = employees,
+				Contacts = contacts
 			}
 		};
 	}

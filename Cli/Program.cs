@@ -6,7 +6,7 @@ var fileOption = new Option<FileInfo>("--file")
     Description = "The file to read entity definitions from."
 };
 
-var root = new RootCommand("DriveCli");
+var root = new RootCommand("analyze");
 root.Options.Add(fileOption);
 
 root.SetAction(result =>
@@ -15,36 +15,40 @@ root.SetAction(result =>
     if (file == null) return 1;
     
     var rows = File.ReadAllLines(file.FullName);
-    var defs = rows.Select(EntityDefinition.Parse).ToList();
+    var defs = rows.Select(Definition.Parse).ToList();
 
     var graphResult = Graph.Parse(defs);
 
+
     if (graphResult.Errors is { Count: > 0 })
     {
+        Console.WriteLine("Graph parsing failed with the following errors:\n");
+        
         foreach (var e in graphResult.Errors)
         {
-            Console.WriteLine($"Error -> {e.Message}");
+            Console.WriteLine($"{e.Error} : {e.Message}");
         }    
     }
 
     if (graphResult.Parsed is not null)
     {
-        foreach (var x in graphResult.Parsed.Partners)
+        var graph = graphResult.Parsed;
+        foreach (var x in graph.Partners.Keys)
         {
-            Console.WriteLine($"Partner -> {x.Name}");
+            Console.WriteLine($"Partner -> {graph.Partners[x].Name}");
         }
         
-        foreach (var x in graphResult.Parsed.Companies)
+        foreach (var x in graph.Companies.Keys)
         {
-            Console.WriteLine($"Company -> {x.Name}");
+            Console.WriteLine($"Company -> {graph.Companies[x].Name}");
         }
         
-        foreach (var x in graphResult.Parsed.Employees)
+        foreach (var x in graph.Employees.Keys)
         {
-            Console.WriteLine($"Employees -> {x.Name} @ {x.Company.Name}");
+            Console.WriteLine($"Employees -> {graph.Employees[x].Name} @ {graph.Employees[x].Company.Name}");
         }
         
-        foreach (var x in graphResult.Parsed.Contacts)
+        foreach (var x in graph.Contacts)
         {
             Console.WriteLine($"Contact -> {x.Partner.Name} : {x.Employee.Name} via {x.Type}");
         }

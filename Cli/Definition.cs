@@ -1,6 +1,6 @@
 namespace Drive;
 
-public enum EntityType
+public enum DefinitionType
 {
 	Partner,
 	Company,
@@ -8,19 +8,19 @@ public enum EntityType
 	Contact
 }
 
-public class EntityDefinition
+public class Definition
 {
-	public EntityType Type { get; init; }
-	public string[] Parts { get; init; }
+	public required DefinitionType Type { get; init; }
+	public required string[] Parts { get; init; }
 
-	public static EntityDefinition Parse(string row)
+	public static Definition Parse(string row)
 	{
 		var parts = row.Split(' ');
-		var entityTypeResult = Enum.TryParse<EntityType>(parts[0], ignoreCase: true, out var type);
+		var entityTypeResult = Enum.TryParse<DefinitionType>(parts[0], ignoreCase: true, out var type);
 		if (!entityTypeResult)
 			throw new ParseException($"Unknown definition type provided '{parts[0]}'. Must be one of (Partner, Company, Employee, Contact)");
 		
-		return new EntityDefinition
+		return new Definition
 		{
 			Type = type,
 			Parts = parts.Skip(1).ToArray()
