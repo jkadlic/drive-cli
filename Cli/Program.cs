@@ -12,73 +12,80 @@ root.Options.Add(fileOption);
 root.SetAction(result =>
 {
     var file = result.GetValue(fileOption);
-    if (file == null) return 1;
+    if (file is null)
+    {
+        Console.Error.WriteLine("Error: No --file provided.");
+        return 1;
+    }
+
+    if (!file.Exists)
+    {
+        Console.Error.WriteLine($"Error: File not found: {file.FullName}");
+        return 1;
+    }
     
-    var rows = File.ReadAllLines(file.FullName);
-    var defs = rows.Select(Definition.Parse).ToList();
+    var lines = File.ReadAllLines(file.FullName);
+    var defs = new List<Definition>();
+    var readErrors = new List<string>();
+
+    for (var i = 0; i < lines.Length; i++)
+    {
+        if (string.IsNullOrWhiteSpace(lines[i]))
+            continue;
+
+        try
+        {
+            defs.Add(Definition.Parse(lines[i]));
+        }
+        catch (ParseException ex)
+        {
+            readErrors.Add($"Line {i + 1}: {ex.Message}");
+        }
+    }
+
+    if (readErrors.Count > 0)
+    {
+        Console.Error.WriteLine("Failed to read definitions:\n");
+        foreach (var e in readErrors)
+            Console.Error.WriteLine(e);
+        return 1;
+    }
 
     var graphResult = Graph.Parse(defs);
-
-
-    if (graphResult.Errors is { Count: > 0 })
-    {
-        Console.WriteLine("Graph parsing failed with the following errors:\n");
-        
-        foreach (var e in graphResult.Errors)
-        {
-            Console.WriteLine($"{e.Error} : {e.Message}");
-        }    
-    }
 
     if (graphResult.Parsed is not null)
     {
         var graph = graphResult.Parsed;
-        foreach (var x in graph.Partners.Keys)
+
+        var groups = graph.Contacts
+            .GroupBy(x => x.Employee.Company.Name)
+            .Select(x =>
+            {
+                var partner = x
+                    .GroupBy(y => y.Partner.Name)
+                    .OrderBy(y => y.Count())
+                    .Select(y => y.Key)
+                    .First();
+                
+                return new
+                {
+                    Company = x.Key,
+                    Count = x.Count(),
+                    Partner = partner
+                };
+            })
+            .ToList();
+
+        foreach (var g in groups)
         {
-            Console.WriteLine($"Partner -> {graph.Partners[x].Name}");
-        }
-        
-        foreach (var x in graph.Companies.Keys)
-        {
-            Console.WriteLine($"Company -> {graph.Companies[x].Name}");
-        }
-        
-        foreach (var x in graph.Employees.Keys)
-        {
-            Console.WriteLine($"Employees -> {graph.Employees[x].Name} @ {graph.Employees[x].Company.Name}");
-        }
-        
-        foreach (var x in graph.Contacts)
-        {
-            Console.WriteLine($"Contact -> {x.Partner.Name} : {x.Employee.Name} via {x.Type}");
+            var ret = (g.Count > 0)
+                ? $"{g.Company}: {g.Partner} ({g.Count})"
+                : $"{g.Company}: No current relationship";
+            Console.WriteLine(ret);
         }
     }
-
-
+    
     return 0;
 });
 
 return root.Parse(args).Invoke();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
