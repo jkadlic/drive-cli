@@ -13,4 +13,10 @@ public enum ContactType
 	Coffee
 }
 
-public record Contact(Employee Employee, Partner Partner, ContactType Type);
+public record Contact(Employee Employee, Partner Partner, ContactType Type)
+{
+	public override string ToString()
+	{
+		return $"{Employee.Name}, {Partner.Name}, {Type}";
+	}
+}

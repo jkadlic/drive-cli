@@ -57,31 +57,23 @@ root.SetAction(result =>
     {
         var graph = graphResult.Parsed;
 
-        var groups = graph.Contacts
-            .GroupBy(x => x.Employee.Company.Name)
-            .Select(x =>
-            {
-                var partner = x
-                    .GroupBy(y => y.Partner.Name)
-                    .OrderBy(y => y.Count())
-                    .Select(y => y.Key)
-                    .First();
-                
-                return new
-                {
-                    Company = x.Key,
-                    Count = x.Count(),
-                    Partner = partner
-                };
-            })
-            .ToList();
+        var contactGroups = graph.Contacts
+            .GroupBy(x => (x.Employee.Company.Name, x.Partner.Name));
 
-        foreach (var g in groups)
+        foreach (var c in graph.Companies.OrderBy(x => x.Value.Name))
         {
-            var ret = (g.Count > 0)
-                ? $"{g.Company}: {g.Partner} ({g.Count})"
-                : $"{g.Company}: No current relationship";
-            Console.WriteLine(ret);
+            var m = contactGroups
+                .Where(x => x.Key.Item1 == c.Key)
+                .MaxBy(x => x.Count());
+
+            if (m is null)
+            {
+                Console.WriteLine($"{c.Key}: No current relationship");
+            }
+            else
+            {
+                Console.WriteLine($"{c.Key}: {m.Key.Item2} ({m.Count()})");
+            }
         }
     }
     
