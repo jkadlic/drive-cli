@@ -1,3 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
+using Drive.Definitions;
+
 namespace Drive;
 
 public class GraphParseError
@@ -8,6 +11,8 @@ public class GraphParseError
 
 public class GraphParseResult
 {
+	[MemberNotNullWhen(true, nameof(Parsed))]
+	[MemberNotNullWhen(false, nameof(Errors))]
 	public required bool Success { get; init; }
 	public Graph? Parsed { get; init; }
 	public IReadOnlyList<GraphParseError>? Errors { get; init; }

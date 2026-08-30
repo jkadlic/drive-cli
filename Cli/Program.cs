@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using Drive;
+using Drive.Definitions;
 
 var fileOption = new Option<FileInfo>("--file")
 {
@@ -24,41 +25,26 @@ root.SetAction(result =>
         return 1;
     }
     
-    var lines = File.ReadAllLines(file.FullName);
-    var defs = new List<Definition>();
-    var readErrors = new List<string>();
-
-    for (var i = 0; i < lines.Length; i++)
-    {
-        if (string.IsNullOrWhiteSpace(lines[i]))
-            continue;
-
-        try
-        {
-            defs.Add(Definition.Parse(lines[i]));
-        }
-        catch (ParseException ex)
-        {
-            readErrors.Add($"Line {i + 1}: {ex.Message}");
-        }
-    }
-
-    if (readErrors.Count > 0)
+    // Load definitions from file and check for errors
+    var loadResult = DefinitionLoader.LoadFromFile(file.FullName);
+    if (!loadResult.Success)
     {
         Console.Error.WriteLine("Failed to read definitions:\n");
-        foreach (var e in readErrors)
+        foreach (var e in loadResult.Errors)
             Console.Error.WriteLine(e);
         return 1;
     }
 
-    var graphResult = Graph.Parse(defs);
+    // Parse definitions into directed graph
+    var graphResult = Graph.Parse(loadResult.Definitions);
 
     if (graphResult.Parsed is not null)
     {
         var graph = graphResult.Parsed;
 
         var contactGroups = graph.Contacts
-            .GroupBy(x => (x.Employee.Company.Name, x.Partner.Name));
+            .GroupBy(x => (x.Employee.Company.Name, x.Partner.Name))
+            .ToList();
 
         foreach (var c in graph.Companies.OrderBy(x => x.Value.Name))
         {

@@ -1,4 +1,4 @@
-namespace Drive;
+namespace Drive.Definitions;
 
 public enum DefinitionType
 {
