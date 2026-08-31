@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Drive.Definitions;
 
-namespace Drive;
+namespace Drive.Graphs;
 
 public class GraphParseError
 {
@@ -18,13 +18,8 @@ public class GraphParseResult
 	public IReadOnlyList<GraphParseError>? Errors { get; init; }
 }
 
-public class Graph
+public static class GraphParser
 {
-	public required IReadOnlyDictionary<string, Partner> Partners { get; init; }
-	public required IReadOnlyDictionary<string, Company> Companies { get; init; }
-	public required IReadOnlyDictionary<string, Employee> Employees { get; init; }
-	public required IReadOnlyList<Contact> Contacts { get; init; }
-
 	private static int Rank(Definition definition) => definition.Type switch
 	{
 		DefinitionType.Partner => 0,

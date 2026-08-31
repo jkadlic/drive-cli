@@ -1,5 +1,5 @@
 ﻿using System.CommandLine;
-using Drive;
+using Drive.Graphs;
 using Drive.Definitions;
 
 var fileOption = new Option<FileInfo>("--file")
@@ -35,33 +35,20 @@ root.SetAction(result =>
         return 1;
     }
 
-    // Parse definitions into directed graph
-    var graphResult = Graph.Parse(loadResult.Definitions);
-
-    if (graphResult.Parsed is not null)
+    // Parse definitions into directed graph and check for errors
+    var graphResult = GraphParser.Parse(loadResult.Definitions);
+    if (!graphResult.Success)
     {
-        var graph = graphResult.Parsed;
-
-        var contactGroups = graph.Contacts
-            .GroupBy(x => (x.Employee.Company.Name, x.Partner.Name))
-            .ToList();
-
-        foreach (var c in graph.Companies.OrderBy(x => x.Value.Name))
-        {
-            var m = contactGroups
-                .Where(x => x.Key.Item1 == c.Key)
-                .MaxBy(x => x.Count());
-
-            if (m is null)
-            {
-                Console.WriteLine($"{c.Key}: No current relationship");
-            }
-            else
-            {
-                Console.WriteLine($"{c.Key}: {m.Key.Item2} ({m.Count()})");
-            }
-        }
+        Console.Error.WriteLine("Failed to parse definitions into graph:\n");
+        foreach (var e in graphResult.Errors)
+            Console.Error.WriteLine(e);
+        return 1;
     }
+
+    var graph = graphResult.Parsed;
+    
+    var analysis = new CompanyRelationshipAnalyzer().Analyze(graph);
+    Console.Write(analysis.ToString());
     
     return 0;
 });
