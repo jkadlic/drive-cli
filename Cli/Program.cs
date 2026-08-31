@@ -4,7 +4,8 @@ using Drive.Definitions;
 
 var fileOption = new Option<FileInfo>("--file")
 {
-    Description = "The file to read entity definitions from."
+    Description = "The file to read entity definitions from.",
+    Required = true
 };
 
 var root = new RootCommand("analyze");
@@ -12,13 +13,7 @@ root.Options.Add(fileOption);
 
 root.SetAction(result =>
 {
-    var file = result.GetValue(fileOption);
-    if (file is null)
-    {
-        Console.Error.WriteLine("Error: No --file provided.");
-        return 1;
-    }
-
+    var file = result.GetRequiredValue(fileOption);
     if (!file.Exists)
     {
         Console.Error.WriteLine($"Error: File not found: {file.FullName}");
