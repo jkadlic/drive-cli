@@ -22,15 +22,15 @@ public class GraphParseResult
 
 public static class GraphParser
 {
-	private static int Rank(Definition definition) => definition.Type switch
+	private static int Rank(Definition definition) => definition switch
 	{
-		DefinitionType.Partner => 0,
-		DefinitionType.Company => 0,
-		DefinitionType.Employee => 1,
-		DefinitionType.Contact => 2,
+		PartnerDefinition => 0,
+		CompanyDefinition => 0,
+		EmployeeDefinition => 1,
+		ContactDefinition => 2,
 		_ => int.MaxValue
 	};
-	
+
 	public static GraphParseResult Parse(ICollection<Definition> definitions)
 	{
 		var errors = new List<GraphParseError>();
@@ -41,33 +41,34 @@ public static class GraphParser
 
 		foreach (var def in definitions.OrderBy(Rank))
 		{
-			switch (def.Type)
+			switch (def)
 			{
-				case DefinitionType.Partner:
-					partners[def.Parts[0]] = new Partner(def.Parts[0]);
+				case PartnerDefinition partnerDef:
+					partners[partnerDef.Name] = new Partner(partnerDef.Name);
 					break;
-				case DefinitionType.Company:
-					companies[def.Parts[0]] = new Company(def.Parts[0]);
+				case CompanyDefinition companyDef:
+					companies[companyDef.Name] = new Company(companyDef.Name);
 					break;
-				case DefinitionType.Employee:
-					if (!companies.TryGetValue(def.Parts[1], out var company))
+				case EmployeeDefinition employeeDef:
+					if (!companies.TryGetValue(employeeDef.CompanyName, out var company))
 					{
-						errors.Add(new GraphParseError { Error = $"Failed to parse Employee '{def.Parts[0]}'", Message = $"Company {def.Parts[1]} not found" });
+						errors.Add(new GraphParseError { Error = $"Failed to parse Employee '{employeeDef.Name}'", Message = $"Company {employeeDef.CompanyName} not found" });
 						break;
 					}
-					employees[def.Parts[0]] = new Employee(def.Parts[0], company);
+					employees[employeeDef.Name] = new Employee(employeeDef.Name, company);
 					break;
-				case DefinitionType.Contact:
-					var employeeOk = employees.TryGetValue(def.Parts[0], out var employee);
-					var partnerOk = partners.TryGetValue(def.Parts[1], out var partner);
-					var typeOk = Enum.TryParse<ContactType>(def.Parts[2], true, out var type);
+				case ContactDefinition contactDef:
+					var employeeOk = employees.TryGetValue(contactDef.EmployeeName, out var employee);
+					var partnerOk = partners.TryGetValue(contactDef.PartnerName, out var partner);
+					var typeOk = Enum.TryParse<ContactType>(contactDef.ContactType, true, out var type);
+					var description = $"{contactDef.EmployeeName}, {contactDef.PartnerName}, {contactDef.ContactType}";
 					if (!employeeOk)
-						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{string.Join(", ", def.Parts)}'", Message = $"Employee {def.Parts[0]} not found" });
+						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{description}'", Message = $"Employee {contactDef.EmployeeName} not found" });
 					if (!partnerOk)
-						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{string.Join(", ", def.Parts)}'", Message = $"Partner {def.Parts[1]} not found" });
+						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{description}'", Message = $"Partner {contactDef.PartnerName} not found" });
 					if (!typeOk)
-						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{string.Join(", ", def.Parts)}'", Message = $"Invalid ContactType provided '{def.Parts[2]}'. Must be one of (email, call, coffee)." });
-					
+						errors.Add(new GraphParseError { Error = $"Failed to parse Contact '{description}'", Message = $"Invalid ContactType provided '{contactDef.ContactType}'. Must be one of (email, call, coffee)." });
+
 					if (employeeOk && partnerOk && typeOk)
 						contacts.Add(new Contact(employee!, partner!, type));
 					break;

@@ -1,15 +1,11 @@
 namespace Drive.Definitions;
 
-public enum DefinitionType
-{
-	Partner,
-	Company,
-	Employee,
-	Contact
-}
+public abstract record Definition;
 
-public class Definition
-{
-	public required DefinitionType Type { get; init; }
-	public required string[] Parts { get; init; }
-}
+public sealed record PartnerDefinition(string Name) : Definition;
+
+public sealed record CompanyDefinition(string Name) : Definition;
+
+public sealed record EmployeeDefinition(string Name, string CompanyName) : Definition;
+
+public sealed record ContactDefinition(string EmployeeName, string PartnerName, string ContactType) : Definition;
