@@ -19,6 +19,7 @@ public static class DefinitionLoader
 		var defs = new List<Definition>();
 		var errors = new List<string>();
 
+		var parser = new DefinitionParser();
 		for (var i = 0; i < lines.Length; i++)
 		{
 			if (string.IsNullOrWhiteSpace(lines[i]))
@@ -26,7 +27,7 @@ public static class DefinitionLoader
 
 			try
 			{
-				defs.Add(Definition.Parse(lines[i]));
+				defs.Add(parser.Parse(lines[i]));
 			}
 			catch (ParseException ex)
 			{
