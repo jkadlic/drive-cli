@@ -39,15 +39,19 @@ public class CompanyRelationshipAnalyzer : IAnalyzer<CompanyRelationshipAnalysis
 	{
 		var entries = new List<CompanyRelationshipEntry>();
 		
+		// Group contacts by company and partner name
 		var contactGroups = graph.Contacts
 			.GroupBy(x => (x.Employee.Company.Name, x.Partner.Name))
 			.ToList();
 
 		foreach (var c in graph.Companies.OrderBy(x => x.Value.Name))
 		{
+			// Match the strongest relationship by contact count then partner name
 			var m = contactGroups
 				.Where(x => x.Key.Item1 == c.Key)
-				.MaxBy(x => x.Count());
+				.OrderByDescending(x => x.Count())
+				.ThenBy(x => x.Key.Item2, StringComparer.Ordinal)
+				.FirstOrDefault();
 
 			if (m != null)
 			{
