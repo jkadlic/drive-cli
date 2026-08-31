@@ -7,6 +7,8 @@ public class GraphParseError
 {
 	public required string Error { get; init; }
 	public required string Message { get; init; }
+	
+	public override string ToString() => $"{Error}: {Message}";
 }
 
 public class GraphParseResult

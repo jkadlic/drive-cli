@@ -15,12 +15,9 @@ public class CompanyRelationshipEntry
 	public Partner? Partner { get; init; }
 	public int? Strength { get; init; }
 
-	public override string ToString()
-	{
-		return HasRelationship
-			? $"{Company.Name}: {Partner.Name} ({Strength})"
-			: $"{Company.Name}: No current relationship";
-	}
+	public override string ToString() => HasRelationship 
+		? $"{Company.Name}: {Partner.Name} ({Strength})"
+		: $"{Company.Name}: No current relationship";
 }
 
 /// <summary>
@@ -30,10 +27,7 @@ public class CompanyRelationshipAnalysis
 {
 	public required List<CompanyRelationshipEntry> Entries { get; init; }
 
-	public override string ToString()
-	{
-		return string.Join("\n", Entries);
-	}
+	public override string ToString() => string.Join("\n", Entries);
 }
 
 /// <summary>
