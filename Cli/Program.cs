@@ -48,7 +48,7 @@ root.SetAction(result =>
     var graph = graphResult.Parsed;
     
     var analysis = new CompanyRelationshipAnalyzer().Analyze(graph);
-    Console.Write(analysis.ToString());
+    Console.WriteLine(analysis.ToString());
     
     return 0;
 });
